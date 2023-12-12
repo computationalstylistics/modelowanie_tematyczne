@@ -1,14 +1,14 @@
 
-## Kod do replikacji eksperymentu
+# Kod do replikacji eksperymentu
 
 
-Kod został napisany w języku R. Do uruchomienia poszczególnych części skryptu potrzebne jest wcześniejsze zainstalowanie bibliotek `udpipe`, `ldatuning`, `topicmodels`, `stylo`.
+Kod został napisany w języku R. Do uruchomienia poszczególnych części skryptu potrzebne jest wcześniejsze zainstalowanie bibliotek `udpipe`, `ldatuning`, `topicmodels`, `stylo`, `wordclouds`.
 
 
 
-### NLP
+## NLP
 
-W pierwszym kroku poszczególne teksty są wczytywane, analizowane pod wględem rozpoznania klas gramatycznych, nazw własnych etc. Jest to standardowy krok w automatycznym przetwarzaniu języka naturalnego (NLP), tutaj realizowany przy użyciu modelu Universal Dependencies oraz biblioteki `udpipe`. Dość istotne jest właściwe ustawienie ścieżek dostępu do plików tesktowych. 
+W pierwszym kroku poszczególne teksty są wczytywane, analizowane pod względem rozpoznania klas gramatycznych, nazw własnych etc. Jest to standardowy krok w automatycznym przetwarzaniu języka naturalnego (NLP), tutaj realizowany przy użyciu modelu Universal Dependencies oraz biblioteki `udpipe`. Dość istotne jest właściwe ustawienie ścieżek dostępu do plików tekstowych. 
 
 Po analizie gramatycznej i zmianie form wyrazowych na lematy każdy tekst wejściowy zostaje podzielony na próbki długości 1000 słów. Usuwane są wszystkie znaki interpunkcyjne oraz nazwy własne. Wszystkie próbki zapisywane są do pliku wynikowego `texts_sliced.txt`. Plik ów został zamieszczony w niniejszym repozytorium, nie potrzeba więc uruchamiać poniższego pierwszego kroku:
 
@@ -98,8 +98,9 @@ frequencies = make.table.of.frequencies(parsed_corpus, freqlist, relative = FALS
 #save(frequencies, file = "word_raw_frequencies.RData")
 ```
 
+Gdy tabele frekwencji jest gotowa (w tej chwili przechowuje ją zmienna `frequencies`), warto od razu pokusić się o wykonanie kolejnego kroku, jakim jest usunięcie słów z tzw. stoplisty. Są to zarówno słowa bardzo częste (gramatyczne), jak i słowa jednostkowe. Można to zrobić albo na samym początku, przez usunięcie _stopwords_ z samych tekstów wejściowych, a można to również zrobić teraz, usuwając z tabeli frekwencji tę ich część, która odpowiada za frekwencje słów ze stoplisty. Poniżej widzimy drugą strategię.
 
-
+Słowa do usunięcia zostały zapisane w pliku `stoplist_pl.txt` (również w bieżącym repozytorium). Zredukowana tabela frekwencji zostanie zapisania do pliku `dtm_pruned_for_topicmodels.RData`: 
 
 
 
@@ -110,8 +111,13 @@ stopwords = unlist(strsplit(stopwords, " "))
 filter_words = !(colnames(frequencies) %in% stopwords)
 dtm_pruned = frequencies[ , filter_words]
 
-#save(dtm_pruned, file = "dtm_pruned_for_topicmodels.RData")
+save(dtm_pruned, file = "dtm_pruned_for_topicmodels.RData")
 ```
+
+
+## Optymalna liczba słowozbiorów
+
+Ten krok może nie jest obligatoryjny -- poza tym obliczenia zajmują całą wieczność -- warto jednak przeprowadzić serię testów, w których liczba słowozbiorów (tematów) jest dobierana automatycznie. W niniejszym kodzie sprawdzone będą wyniki dla 10, 40, 70, ..., 300 słowozbiorów (odpowiada za to funkcja `seq(from = 10, to = 300, by = 30)`). Wyniki zostają zapisane do pliku: 
 
 
 
@@ -131,6 +137,8 @@ results = FindTopicsNumber(
 save(results, file = "LDA_k_optimize_for_10-300_topics.RData")
 ```
 
+Efekty tych intensywnych obliczeń można zwizualizować:
+
 
 ``` R
 FindTopicsNumber_plot(results)
@@ -139,10 +147,12 @@ FindTopicsNumber_plot(results)
 
 
 
+## Trenowanie modelu tematycznego
 
+Poniższy fragment kodu zawiera zasadniczy krok procedury. Użyjemy tabeli frekwencji z usuniętymi słowami ze stoplisty, czyli pliku `dtm_prunned_for_topicmodels.RData`. Trenowanie modelu zapewnia funkcja `LDA()` wraz z odpowiednim zestawem parametrów. Parametr _k_ (zadana liczba słowozbiorów do odnalezienia) został uzyskany w poprzednim teście (zob. wyżej), sprawdzającym wiele możliwych ustawień. 
 
+Parametry użyte w niniejszym kodzie należą w gruncie rzeczy do typowego zestawu ustawień: metoda LDA, próbkowanie Gibbsa, 100 słowozbiorów do odnalezienia, 1000 iteracji w ramach rozgrzewki (w sumie wystarczyłoby znacznie mniej) oraz 2000 iteracji właściwych, podczas których trenowany (uczony) jest model:
 
-Typowe użycie: model LDA, Gibbs sampling, 100 słowozbiorów (1000 + 2000 iteracji, tak wiele iteracji na rozgrzewkę chyba nie jest zresztą potrzebne):
 
 ``` R
 load("dtm_pruned_for_topicmodels.RData")
@@ -161,10 +171,26 @@ topic_words = model_weights$terms
 doc_topics = model_weights$topics
 ```
 
+Model jest gotowy do inspekcji. Można to czynić poprzez przeglądanie obu wyłonionych właśnie tabel z prawdopodobieństwami, można także spróbować technik wizualizacji, tak jak w poniższym przykładzie.
+
+
+## Wizualizacja
+
+Dość wygodnym sposobem ilustrowania udziału poszczególnych słów w poszczególnych słowozbiorach są tzw. chmury słów (_wordclouds_). Reprezentują one większe prawdopodobieństwo wystąpienia danego słowa przez użycie większego rozmiaru pisma. Kod do wizualizacji znajduje się w osobnym notatniku `kod_do_obrazkow.md` w niniejszym repozytorium.
+
+
+## Koherencja tematyczna
+
+
+Przy okazji przetwarzania NLP każdej próbce został przyporządkowany jej numer oraz skrócona nazwa. Ten plik się teraz przyda. Można go wczytać w następujący sposób:
+
 
 ``` R
 chunk_IDs = readLines("../chunk_IDs.txt")
 ```
+
+Następujący kod idzie przez wszystkie 100 powieści i dla każdej generuje wykres z wartością indeksu koherencji w poszczególnych próbkach:
+
 
 
 ``` R

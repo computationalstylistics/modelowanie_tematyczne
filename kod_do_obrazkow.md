@@ -1,22 +1,28 @@
 
 
+
+
+``` R
 library(topicmodels)
 library(wordcloud)
 library(mgcv)
 
-
 load("topic_model_k-100.RData")
+```
 
+
+
+``` R
 model_weights = posterior(topic_model)
 topic_words = model_weights$terms
 doc_topics = model_weights$topics
 
 chunk_IDs = readLines("chunk_IDs.txt")
 book_IDs = unique(gsub("_[0-9]{3}$", "", chunk_IDs))
+```
 
 
-
-
+``` R
 png(filename = "rys-1_slowozbiory.png", width = 6, height = 10, res = 600, units = "in")
 
 no_of_words = 50
@@ -37,12 +43,12 @@ for(topic_id in c(10, 72, 80, 100, 53, 62)) {
 }
 par(op)
 dev.off()
+```
 
 
 
-
-
-#png(filename = "rys-2_proporcje_topikow.png", width = 6, height = 4, res = 600, units = "in")
+``` R
+png(filename = "rys-2_proporcje_topikow.png", width = 6, height = 4, res = 600, units = "in")
 
 no_of_words = 50
 
@@ -60,13 +66,13 @@ plot(x, type = "h", ylim = c(0, 0.6), col = rgb(0, 0, 0, 0.5), lwd = 3, axes = F
 axis(1)
 box()
 par(op)
-#dev.off()
+dev.off()
+```
 
 
 
 
-
-
+``` R
 png(filename = "rys-3_simpson.png", width = 6, height = 5, res = 600, units = "in")
 # Simpson's index:
 #plot(rowSums(doc_topics ^2))
@@ -96,13 +102,13 @@ axis(1, at = 1:13, labels = titles_with_gap, las = 2)
 box()
 
 dev.off()
+```
 
 
 
 
-
-
-#png(filename = "rys-4.png", width = 6, height = 5, res = 600, units = "in")
+``` R
+png(filename = "rys-4.png", width = 6, height = 5, res = 600, units = "in")
 novels = c(9, 25, 79, 50, 54, 97)
 op <- par(mfrow = c(3, 2),
           oma = c(4, 4, 0, 0),
@@ -119,11 +125,12 @@ title(xlab = "",
       outer = TRUE, line = 3)
 
 par(op)
-#dev.off()
+dev.off()
+```
 
 
 
-
+``` R
 png(filename = "rys-5.png", width = 6, height = 5, res = 600, units = "in")
 novels = c(61, 39, 64, 66, 71, 93)
 op <- par(mfrow = c(3, 2),
@@ -138,5 +145,5 @@ for(i in novels) {
 }
 par(op)
 dev.off()
-
+```
 
