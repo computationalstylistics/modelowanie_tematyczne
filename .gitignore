@@ -47,3 +47,9 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Apple's Desktop Service Store files
+.DS_store
+
+
+
